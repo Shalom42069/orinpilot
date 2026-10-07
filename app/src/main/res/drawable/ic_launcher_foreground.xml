@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Chip -->
+    <path android:fillColor="#00000000" android:strokeColor="#FF76B900" android:strokeWidth="4"
+        android:pathData="M36,36h36v36h-36z" />
+    <!-- Pins -->
+    <path android:fillColor="#FF76B900"
+        android:pathData="M42,28h4v8h-4z M52,28h4v8h-4z M62,28h4v8h-4z M42,72h4v8h-4z M52,72h4v8h-4z M62,72h4v8h-4z M28,42h8v4h-8z M28,52h8v4h-8z M28,62h8v4h-8z M72,42h8v4h-8z M72,52h8v4h-8z M72,62h8v4h-8z" />
+    <!-- Prompt -->
+    <path android:fillColor="#00000000" android:strokeColor="#FFE8F0E0" android:strokeWidth="4"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M45,47l7,7l-7,7" />
+    <path android:fillColor="#00000000" android:strokeColor="#FFE8F0E0" android:strokeWidth="4"
+        android:strokeLineCap="round" android:pathData="M56,62h9" />
+</vector>

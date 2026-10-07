@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.OrinPilot" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#FF0E1110</item>
+        <item name="android:statusBarColor">#FF0E1110</item>
+        <item name="android:navigationBarColor">#FF0E1110</item>
+    </style>
+</resources>
