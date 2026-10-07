@@ -12,14 +12,31 @@ android {
         applicationId = "de.marlon.orinpilot"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
+    }
+
+    // fester Schlüssel, damit Updates über eine bestehende Installation funktionieren
+    signingConfigs {
+        create("orinpilot") {
+            storeFile = file("orinpilot.jks")
+            storePassword = "orinpilot"
+            keyAlias = "orinpilot"
+            keyPassword = "orinpilot"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("orinpilot")
+            applicationIdSuffix = ".debug"
+        }
         release {
-            isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            // R8: kleinere, deutlich flüssigere App (Compose im Debug-Build ist spürbar langsamer)
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("orinpilot")
         }
     }
     compileOptions {

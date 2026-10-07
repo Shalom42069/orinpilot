@@ -26,6 +26,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -275,4 +277,106 @@ fun ChipRow(content: @Composable () -> Unit) {
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) { content() }
+}
+
+/**
+ * Dialog, der die Ausgabe eines langlaufenden Befehls live anzeigt (z. B. Installationen).
+ * Erwartet Zeilen aus [de.marlon.orinpilot.ssh.SshConnection.streamWithExit].
+ * Schließen bricht den Befehl ab (Kanal wird getrennt).
+ */
+@Composable
+fun LiveOutputDialog(
+    title: String,
+    lines: kotlinx.coroutines.flow.Flow<String>,
+    onDismiss: () -> Unit,
+    onFinished: (exit: Int) -> Unit = {},
+) {
+    val clip = LocalClipboardManager.current
+    val buf = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateListOf<String>() }
+    var exit by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Int?>(null) }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    androidx.compose.runtime.LaunchedEffect(lines) {
+        try {
+            lines.collect { raw ->
+                if (raw.startsWith(de.marlon.orinpilot.ssh.SshConnection.EXIT_MARKER)) {
+                    exit = raw.removePrefix(de.marlon.orinpilot.ssh.SshConnection.EXIT_MARKER).trim().toIntOrNull() ?: -1
+                } else {
+                    // Fortschrittsbalken (\r) auf die letzte Variante reduzieren
+                    val l = raw.substringAfterLast('\r')
+                    if (buf.size >= 600) repeat(100) { buf.removeAt(0) }
+                    buf.add(l)
+                }
+            }
+        } catch (e: Exception) {
+            buf.add("[Fehler] ${e.message}")
+        }
+        if (exit == null) exit = -1
+        onFinished(exit ?: -1)
+    }
+    androidx.compose.runtime.LaunchedEffect(buf.size) {
+        if (buf.isNotEmpty()) listState.scrollToItem(buf.lastIndex)
+    }
+
+    AlertDialog(
+        onDismissRequest = {},
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(title, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                when (val e = exit) {
+                    null -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    0 -> Pill("OK", OP.Green)
+                    else -> Pill("Fehler $e", OP.Red)
+                }
+            }
+        },
+        text = {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 120.dp, max = 460.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF0A0C0B))
+                    .padding(8.dp)
+            ) {
+                SelectionContainer {
+                    androidx.compose.foundation.lazy.LazyColumn(state = listState) {
+                        items(buf.size) { i ->
+                            Text(
+                                buf[i], fontFamily = FontFamily.Monospace, fontSize = 10.5.sp,
+                                color = OP.Text, softWrap = true
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(if (exit == null) "Abbrechen" else "Schließen") }
+        },
+        dismissButton = {
+            TextButton(onClick = { clip.setText(AnnotatedString(buf.joinToString("\n"))) }) { Text("Kopieren") }
+        },
+    )
+}
+
+/** Kleiner beschrifteter Schalter für Einstellungen */
+@Composable
+fun SwitchRow(label: String, checked: Boolean, sub: String = "", onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(label, color = OP.Text, fontSize = 14.sp)
+            if (sub.isNotBlank()) Text(sub, color = OP.TextDim, fontSize = 11.sp)
+        }
+        androidx.compose.material3.Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+fun humanBytes(b: Long): String {
+    if (b < 1024) return "$b B"
+    val units = listOf("KB", "MB", "GB", "TB")
+    var v = b / 1024.0
+    var i = 0
+    while (v >= 1024 && i < units.lastIndex) { v /= 1024; i++ }
+    return String.format(java.util.Locale.GERMANY, if (v < 10) "%.1f %s" else "%.0f %s", v, units[i])
 }

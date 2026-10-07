@@ -49,6 +49,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private var conn: SshConnection? = null
 
+    /** Ollama-Bereich (Modelle, Chat, Benchmark) */
+    val ollama = OllamaController(this, viewModelScope, app)
+
     // ---------------------------------------------------------------- Dashboard
     private val _stats = MutableStateFlow<TegraStats?>(null)
     val stats: StateFlow<TegraStats?> = _stats
@@ -216,6 +219,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _sysInfo.value = null
         remoteJob?.cancel()
         _remote.value = RemoteSetup()
+        ollama.reset()
     }
 
     val connection: SshConnection? get() = conn
@@ -231,6 +235,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         } catch (e: Exception) {
             ExecResult(-1, "", e.message ?: e.toString())
         }
+    }
+
+    /** Langlaufenden Befehl live streamen (Zeilen + Exit-Marker, siehe LiveOutputDialog). */
+    fun live(cmd: String, sudo: Boolean = false): kotlinx.coroutines.flow.Flow<String> {
+        val c = conn ?: return kotlinx.coroutines.flow.flowOf("Nicht verbunden", SshConnection.EXIT_MARKER + "1")
+        return c.streamWithExit(cmd, sudo)
     }
 
     /** Für Docker & Co.: erst ohne sudo, bei "permission denied" mit sudo. */
@@ -275,9 +285,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private var paused = false
+
+    /** App im Hintergrund: tegrastats-Stream anhalten (spart Akku und Datenvolumen) */
+    fun onAppBackground() {
+        if (statsJob != null) { statsJob?.cancel(); statsJob = null; paused = true }
+    }
+
+    fun onAppForeground() {
+        if (paused && conn?.isConnected == true) startStats()
+        paused = false
+    }
+
     private fun push(flow: MutableStateFlow<List<Float>>, v: Float) {
         val l = flow.value
-        flow.value = (if (l.size >= 90) l.drop(l.size - 89) else l) + v
+        val n = ArrayList<Float>(minOf(l.size + 1, 90))
+        if (l.size >= 90) n.addAll(l.subList(l.size - 89, l.size)) else n.addAll(l)
+        n.add(v)
+        flow.value = n
     }
 
     fun refreshSysInfo() {

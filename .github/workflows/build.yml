@@ -18,17 +18,17 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
-      - name: Build debug APK
+      - name: Build APKs
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug
+          ./gradlew --no-daemon assembleRelease assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: OrinPilot-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: OrinPilot-apk
+          path: app/build/outputs/apk/**/*.apk
       - name: Publish APK to apk branch
         run: |
-          mkdir /tmp/out && cp app/build/outputs/apk/debug/*.apk /tmp/out/OrinPilot-debug.apk
+          mkdir /tmp/out && cp app/build/outputs/apk/debug/*.apk /tmp/out/OrinPilot-debug.apk && cp app/build/outputs/apk/release/*.apk /tmp/out/OrinPilot.apk
           cd /tmp/out
           git init -q -b apk
           git config user.name "github-actions"

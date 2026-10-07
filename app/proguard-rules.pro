@@ -1,0 +1,13 @@
+# JSch lädt Algorithmen per Reflection (Class.forName)
+-keep class com.jcraft.jsch.** { *; }
+-keep class org.bouncycastle.** { *; }
+-dontwarn com.jcraft.jsch.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.slf4j.**
+-dontwarn org.apache.logging.**
+-dontwarn org.apache.log4j.**
+-dontwarn com.sun.jna.**
+-dontwarn org.ietf.jgss.**
+-dontwarn org.newsclub.**
+-dontwarn javax.naming.**
+-keepattributes Signature,InnerClasses,EnclosingMethod

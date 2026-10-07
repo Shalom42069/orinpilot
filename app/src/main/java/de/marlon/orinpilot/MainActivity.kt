@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,7 +54,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.marlon.orinpilot.ui.OP
 import de.marlon.orinpilot.ui.OrinTheme
-import de.marlon.orinpilot.ui.screens.ControlScreen
+import de.marlon.orinpilot.ui.screens.ControlHub
+import de.marlon.orinpilot.ui.screens.OllamaScreen
 import de.marlon.orinpilot.ui.screens.DashboardScreen
 import de.marlon.orinpilot.ui.screens.FilesScreen
 import de.marlon.orinpilot.ui.screens.HostsScreen
@@ -74,6 +76,16 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onStart() {
+        super.onStart()
+        vm.onAppForeground()
+    }
+
+    override fun onStop() {
+        vm.onAppBackground()
+        super.onStop()
+    }
 }
 
 private data class Tab(val label: String, val icon: ImageVector)
@@ -81,6 +93,7 @@ private data class Tab(val label: String, val icon: ImageVector)
 private val TABS = listOf(
     Tab("Übersicht", Icons.Default.Dashboard),
     Tab("Steuerung", Icons.Default.Tune),
+    Tab("KI", Icons.Default.SmartToy),
     Tab("Terminal", Icons.Default.Code),
     Tab("Dateien", Icons.Default.Folder),
     Tab("System", Icons.Default.Memory),
@@ -130,10 +143,11 @@ fun App(vm: MainViewModel) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (tab) {
                 0 -> DashboardScreen(vm, onOpenRemote = { tab = 1 })
-                1 -> ControlScreen(vm)
-                2 -> TerminalScreen(vm)
-                3 -> FilesScreen(vm)
-                else -> SystemScreen(vm, onOpenTerminal = { tab = 2 })
+                1 -> ControlHub(vm)
+                2 -> OllamaScreen(vm)
+                3 -> TerminalScreen(vm)
+                4 -> FilesScreen(vm)
+                else -> SystemScreen(vm, onOpenTerminal = { tab = 3 })
             }
         }
 
@@ -145,7 +159,8 @@ fun App(vm: MainViewModel) {
                         selected = tab == i,
                         onClick = { tab = i },
                         icon = { Icon(t.icon, t.label) },
-                        label = { Text(t.label, fontSize = 11.sp, maxLines = 1) },
+                        label = { Text(t.label, fontSize = 10.sp, maxLines = 1) },
+                        alwaysShowLabel = true,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = OP.Green,
                             selectedTextColor = OP.Green,

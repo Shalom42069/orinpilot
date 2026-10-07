@@ -104,6 +104,7 @@ class SshConnection(val profile: HostProfile) {
     }
 
     fun disconnect() {
+        synchronized(forwards) { forwards.clear() }
         runCatching { sftpChannel?.disconnect() }
         sftpChannel = null
         runCatching { session?.disconnect() }
@@ -192,6 +193,29 @@ class SshConnection(val profile: HostProfile) {
         }
     }.flowOn(Dispatchers.IO)
 
+    /**
+     * Wie [streamLines], hängt aber am Ende eine Markerzeile mit dem Exit-Code an
+     * (siehe [EXIT_MARKER]). stderr wird mit ausgegeben.
+     */
+    fun streamWithExit(cmd: String, sudo: Boolean = false): Flow<String> =
+        streamLines("( $cmd ) 2>&1; echo \"$EXIT_MARKER\$?\"", sudo)
+
+    private val forwards = HashMap<Int, Int>()
+
+    /**
+     * SSH-Tunnel: lokaler Port auf dem Handy -> 127.0.0.1:[remotePort] auf dem Jetson.
+     * Der Dienst muss dafür nicht im LAN freigegeben sein. Liefert den lokalen Port.
+     */
+    suspend fun forwardLocal(remotePort: Int): Int = withContext(Dispatchers.IO) {
+        synchronized(forwards) {
+            val s = requireSession()
+            forwards[remotePort]?.let { return@withContext it }
+            val local = s.setPortForwardingL("127.0.0.1", 0, "127.0.0.1", remotePort)
+            forwards[remotePort] = local
+            local
+        }
+    }
+
     /** Öffnet eine interaktive Shell mit PTY (xterm-256color). */
     suspend fun openShell(cols: Int, rows: Int): ShellChannel = withContext(Dispatchers.IO) {
         val ch = requireSession().openChannel("shell") as ChannelShell
@@ -218,6 +242,8 @@ class SshConnection(val profile: HostProfile) {
     }
 
     companion object {
+        const val EXIT_MARKER = "__ORINPILOT_EXIT="
+
         /** Erzeugt ein RSA-3072-Schlüsselpaar: (privater PEM-Schlüssel, öffentlicher Schlüssel) */
         fun generateKeyPair(comment: String = "orinpilot@android"): Pair<String, String> {
             val kp = KeyPair.genKeyPair(JSch(), KeyPair.RSA, 3072)
